@@ -1,0 +1,710 @@
+<!doctype html>
+<html>
+	<head>
+    		<script src="phaser.min.js"></script>
+    		<style>
+    			body{margin:0}
+    		</style>
+    		<script type="text/javascript">
+			window.onload = function() {
+                    // tile width, in pixels
+				var tileSize = 100;
+				var colMax = 5;
+				var rowMax = 5;
+				
+				// creation of a new phaser game, with a proper width and height according to tile size
+				var game = new Phaser.Game(tileSize*colMax,tileSize*rowMax,Phaser.CANVAS,"",{preload:onPreload, create:onCreate, update:onUpdate});
+				// game array, starts with all cells to zero
+				var fieldArray = Array(colMax * rowMax).fill(0);
+				// this is the group which will contain all tile sprites
+				var tileSprites;
+				var tileMap = {};
+				// variables to handle keyboard input
+				var upKey;
+				var downKey;
+				var leftKey;
+				var rightKey;
+				// colors to tint tiles according to their value
+				var colors = {
+					0:0x71FF61,
+					1:0x71FF61,
+					2:0x92C1FD,
+					3:0xE4BF5A,
+					4:0xF08080,
+					5:0xA650E8,
+					6:0xFFDDDD,
+					7:0xFFCCCC,
+					8:0xFFBBBB,
+					9:0xFFAAAA,
+					128:0xFF9999,
+					256:0xFF8888,
+					512:0xFF7777,
+					1024:0xFF6666,
+					2048:0xFF5555,
+					4096:0xFF4444,
+					8192:0xFF3333,
+					16384:0xFF2222,
+					32768:0xFF1111,
+					65536:0xFF0000
+				}
+				// at the beginning of the game, the player cannot move
+                    var canMove=false;
+					var lock = 0;
+					
+				// THE GAME IS PRELOADING
+				function onPreload() {
+					// preload the only image we are using in the game
+					game.load.image("tile", "tile.png");
+				}
+				
+				// THE GAME HAS BEEN CREATED
+				function onCreate() {
+					// listeners for WASD keys
+					// upKey = game.input.keyboard.addKey(Phaser.Keyboard.W);
+					// upKey.onDown.add(moveUp,this);
+					// 
+					// 
+    				// 	downKey = game.input.keyboard.addKey(Phaser.Keyboard.S);
+    				// 	downKey.onDown.add(moveDown,this);
+    				// 	leftKey = game.input.keyboard.addKey(Phaser.Keyboard.A);
+    				// 	leftKey.onDown.add(moveLeft,this);
+    				// 	rightKey = game.input.keyboard.addKey(Phaser.Keyboard.D);
+    				// 	rightKey.onDown.add(moveRight,this);
+    					// sprite group declaration
+					tileSprites = game.add.group();
+    					// at the beginning of the game we add two "2"
+					// addTwo();
+					// addTwo();
+					initGame();
+				}
+				
+				function onUpdate() {
+					// console.log("update");
+					if (canMove && lock == 0) {
+						fall();
+						// check();
+					}
+					if (!containsZero() && lock == 0) {
+						// console.log("done");
+						check();
+					}
+					// if (lock == 0) {
+					// 	check();
+					// }
+				}
+				
+				function containsZero() {
+					for (var j=colMax - 1; j>=0; j--) {
+						for (var i=rowMax - 1; i>=0; i--) {
+							if (fieldArray[i*colMax + j] == 0) return true;
+						}
+					}
+					return false;
+				}
+				
+				function findRandomBlocksToCancel() {
+					for (var j=colMax - 1; j>=0; j--) {
+						for (var i=0; i<rowMax; i++) {
+							var visited = Array(colMax * rowMax).fill(0);
+							var val = findBlocks(i, j, visited);
+							if ( val >= 3) {
+								return i*colMax + j;
+							}
+						}
+					}
+					return null;
+				}
+				
+				function check() {
+					// console.log(canMove);
+					if (containsZero() || lock != 0 || !canMove) {
+						return;
+					}
+					var pos = findRandomBlocksToCancel();
+					if (pos != null) {
+						var x = toRow(pos);
+						var y = toCol(pos);
+						canMove = false;
+						setTimeout(function(){  
+							
+								// console.log("timeout func: ", x, y);
+								// 
+								shrinkBlocksPostClick(x, y); 
+							
+						}, 300);
+					}
+				}
+				
+				function fall() {
+					for (var i=0; i<rowMax; i++) {
+						for (var j=0; j<colMax; j++) {
+							if (i == 0 && fieldArray[i*colMax + j] == 0) {
+								var randomValue = Math.floor(Math.random()*4) + 1;
+								// console.log("createing tile");
+								createTile(i, j, randomValue);
+								fieldArray[i*colMax + j] = randomValue;
+								updateNumbers();
+							}
+							if (i + 1 < rowMax && 
+								fieldArray[(i+1)*colMax + j] == 0 &&
+							    fieldArray[i*colMax + j] != 0) {
+								// console.log(canMove, i, j);
+								// canMove = false;
+								tileSprites.forEach(function(item){
+									var endPos = (i+1)*colMax + j;
+									if(item.pos == i*colMax + j) {
+										// console.log(i ,j, item.pos, endPos);
+										lock += 1;
+										moveTileWithSteps(item, [item.pos, endPos], function(currentTile){
+					
+											fieldArray[endPos] = fieldArray[currentTile.pos];
+											fieldArray[currentTile.pos] = 0;
+											console.log(currentTile.pos, endPos);
+											currentTile.pos = endPos;
+											
+											// canMove = true;
+											lock -= 1;
+											printBoard();
+										});
+									}
+								});
+							}
+						}
+					}
+				}
+				
+				function initGame() {
+					// do{
+					// 	var randomValue = Math.floor(Math.random()*16);
+					// } while (fieldArray[randomValue]!=0)
+					// such empty tile now takes "2" value
+					// console.log(fieldArray);
+					// fieldArray[randomValue]=2;
+					
+					var debug = [1, 1, 3, 4, 1, 2, 2, 2, 3, 5, 4, 5, 2, 3, 4, 5];
+					
+					for (var i=0; i<rowMax; i++) {
+						for (var j=0; j<colMax; j++) {
+							var pos = i*colMax + j;
+							var visited = Array(colMax * rowMax).fill(0);
+							do{
+								// console.log(i, j);
+								visited = Array(colMax * rowMax).fill(0);
+								var randomValue = Math.floor(Math.random()*5) + 1;
+								fieldArray[pos] = randomValue;
+								// checkBoard();
+								// console.log(findBlocks(i, j, randomValue, visited) > 2);
+							} while (findBlocks(i, j, visited) > 2)
+							// fieldArray[pos] = debug[pos];
+							createTile(i, j, fieldArray[pos]);
+							
+						}
+					}
+					console.log(fieldArray);
+					// creation of a new sprite with "tile" instance, that is "tile.png" we loaded before
+					
+				}
+				
+				function click(i, j) {
+					if (canMove == true && lock == 0) {
+						fieldArray[i*colMax+j] += 1;
+						updateNumbers();
+						// checkBoard();
+						// cancelConnections(i, j);
+						
+						shrinkBlocksPostClick(i, j);
+					}
+				}
+				
+				function shrinkBlocksPostClick(i, j) {
+					// console.log(i, j);
+					if (findBlocks(i, j, Array(colMax * rowMax).fill(0)) >= 3) {
+						canMove = false;
+						var targetVal = fieldArray[i*colMax + j];
+						var visited = Array(colMax * rowMax).fill(0);
+						var result = {};
+						findConnectingBlocks(i, j, targetVal, visited, result, []);
+						var maxLength = 0;
+						var maxPos = i * colMax + j;
+						for (var pos in result){
+							if (maxLength < result[pos].length) {
+								maxLength = result[pos].length;
+								maxPos = pos;
+							}
+							if (pos != i*colMax + j) {
+								fieldArray[pos] = 0;
+							}
+						}
+						// console.log(result);
+						for (var pos in result){
+							if (pos == i*colMax + j) {
+								continue;
+							}
+							var path = result[pos].reverse();
+							tileSprites.forEach(function(item){
+								if(item.pos == pos) {
+									console.log(i ,j, item.pos);
+									
+									moveTileWithSteps(item, path, function(currentTile){
+										item.destroy();
+										if (maxPos == currentTile.pos) {
+											console.log("last one");
+											fieldArray[i*colMax + j] += 1;
+											canMove = true;
+											updateNumbers();
+											// checkBoard();
+											// printBoard();
+										}
+									});
+								}
+							});	
+						}
+					}
+				}
+
+				function findConnectingBlocks(i, j, targetVal, visited, result, path) {
+					if (i < 0 || i >= rowMax) return;
+					if (j < 0 || j >= colMax) return;
+					if (visited[i*colMax + j] == 1) return;
+
+					var val = fieldArray[i*colMax + j];
+					visited[i*colMax + j] = 1;
+					if (val == targetVal) {
+						// console.log("connected: ", i, j, i*colMax +j);
+						var _path = path.slice();
+						_path.push(i*colMax + j);
+						result[i*colMax + j] = _path;
+						findConnectingBlocks(i - 1, j, targetVal, visited, result, _path);
+						findConnectingBlocks(i + 1, j, targetVal, visited, result, _path);
+						findConnectingBlocks(i, j - 1, targetVal, visited, result, _path);
+						findConnectingBlocks(i, j + 1, targetVal, visited, result, _path);
+					}
+				}
+				
+				function moveTileWithSteps(tile,steps,callback){
+					// first, we update the array with new values
+                     // fieldArray[to]=fieldArray[from];
+                     // fieldArray[from]=0;
+                     // tile.pos=steps[steps.length - 1];
+					 var prevAnim = null;
+					 // console.log("steps: ", steps, tile);
+					 var movement = game.add.tween(tile);
+					 movement.currentTile = tile;
+					
+					 for (var i in steps) {
+						 if (i==0) continue;
+						 // console.log("step: ", steps[i]);
+						 var step = steps[i];
+						 // then we create a tween
+						  movement = movement.to({x:tileSize*(toCol(step)),y:tileSize*(toRow(step))},150,Phaser.Easing.Power4);
+						 // console.log("prev anim ", prevAnim);
+						// if (prevAnim != null) {
+						// 	prevAnim.onComplete.add(function(){
+						// 		console.log("start move: ", movement);
+		                //     	movement.start();
+		                //     });
+						// } else {
+						// 	movement.start();
+						// }
+						
+						// prevAnim = movement;
+						 
+	                     // if(i == steps.length - 1){
+							//  // if the tile has to be removed, it means the destination tile must be multiplied by 2
+	                     //      // fieldArray[step]+=1;
+	                     //      // at the end of the tween we must destroy the tile
+	                     //      movement.onComplete.add(function(){
+							// 	   // console.log("complete", movement);
+	                     //           callback(movement.currentTile);
+							// 	   // tile.pos = steps[i];
+	                     //      });
+	                     // }
+					 }
+					 movement._lastChild.onComplete.add(function() {
+						 callback(movement.currentTile);
+					 }, this);
+					 movement.start();
+                }
+				
+				function isHorizontalReachable(row, colFrom, colTo) {
+					var steps = Math.abs(colTo- colFrom);
+					var sign = 1;
+					if (colTo - colFrom < 0) {
+						sign = -1;
+					}
+					var targetVal = fieldArray[row * colMax + colTo];
+					for (var i = 0; i < steps; i ++) {
+						if (fieldArray[row * colMax + colFrom + sign * i] != targetVal) {
+							// console.log("?? : ", i)
+							return false;
+						}
+					}
+					// fieldArray[row * colMax + colFrom]
+					return true;
+				}
+				
+				function findConnectingBlock(targetVal, i, j) {
+					for (var k=0; k<colMax;k ++) {
+						var prevRowVal = fieldArray[(i-1)*colMax + k];
+						if(targetVal == prevRowVal && j == k) {
+							console.log(i, j);
+							for (var z=0; z<colMax; z++) {
+								var pos = i*colMax + z;
+								if (isHorizontalReachable(i, z, j) && fieldArray[pos] == targetVal) {
+									console.log("should move to: ", i, z);
+									
+									// tileSprites.forEach(function(item){
+									// 	if(item.pos == pos) {
+									// 		console.log("moving: " + item);
+									// 		moveTile(item, pos, i*colMax + j, false);
+									// 	}
+									// });	
+								}
+							}
+						}
+					}
+				}
+				
+				function test() {
+					console.log("test");
+					var current = Array(colMax * rowMax).fill(0);
+					for (var j=colMax - 1; j>=0; j--) {
+						for (var i=rowMax - 1; i>=0; i--) {
+							var visited = Array(colMax * rowMax).fill(0);
+							var val = findBlocks(i, j, visited);
+							if ( val >= 3) {
+								current[i*colMax+j] = val;
+							}
+						}
+					}
+					
+					var targetVal = -1;
+					
+					for (var j=colMax - 1; j>=0; j--) {
+						for (var i=rowMax - 1; i>=1; i--) {
+							if (current[i*colMax + j] != 0) {
+								targetVal = fieldArray[i*colMax + j];
+								findConnectingBlock(targetVal, i, j);
+							}
+						}
+					}
+					console.log(current);
+				}
+				
+				function checkBoard() {
+					var out = "";
+					
+					
+					for (var i=0; i<rowMax; i++) {
+						for (var j=0; j<colMax; j++) {
+						
+							var visited = Array(colMax * rowMax).fill(0);
+							if (fieldArray[i*colMax+j] == 0) {
+								out += "0"
+							} else {
+								out += findBlocks(i, j, visited);
+							}
+							out += " ";
+						}
+						out += "\n";
+						
+					}
+					console.log(out);
+				}
+				
+				function printBoard() {
+					var out = "";
+					
+					
+					for (var i=0; i<rowMax; i++) {
+						for (var j=0; j<colMax; j++) {
+						
+							out += fieldArray[i*colMax + j];
+							
+							out += " ";
+						}
+						out += "\n";
+						
+					}
+					console.log(out);
+				}
+				
+				function createTile(i, j, val) {
+					pos = i*colMax + j;
+					var tile = game.add.sprite(toCol(pos)*tileSize,(toRow(pos)-1)*tileSize,"tile");
+					// creation of a custom property "pos" and assigning it the index of the newly added "2"
+					tile.pos = pos;
+					// at the beginning the tile is completely transparent
+					tile.alpha=1;
+					// creation of a text which will represent the value of the tile
+					var text = game.add.text(tileSize/2,tileSize/2, val.toString(), {font:"bold 16px Arial",align:"center"});
+						 // setting text anchor in the horizontal and vertical center
+					text.anchor.set(0.5);
+					// adding the text as a child of tile sprite
+					tile.addChild(text);
+					tile.inputEnabled = true;
+					tile.events.onInputDown.add(() => {
+						var x = toRow(tile.pos);
+						var y = toCol(tile.pos);
+						click(x, y);
+					}, this);
+					// adding tile sprites to the group
+					tileSprites.add(tile);
+					// creation of a new tween for the tile sprite
+					var fadeIn = game.add.tween(tile);
+					// the tween will make the sprite completely opaque in 250 milliseconds
+					fadeIn.to({x:tileSize*(toCol(pos)),y:tileSize*(toRow(pos))},100, Phaser.Easing.Quadratic.In);
+					// tween callback
+					fadeIn.onComplete.add(function(){
+						// updating tile numbers. This is not necessary the 1st time, anyway
+						updateNumbers();
+						// now I can move
+						canMove=true;
+					})
+					// starting the tween
+					fadeIn.start();
+				}
+				
+				function cancelConnections(endX, endY) {
+					var stack = [];
+
+
+					for (var i=0; i<rowMax; i++) {
+						for (var j=0; j<colMax; j++) {
+							var visited = Array(colMax * rowMax).fill(0);
+							if (findBlocks(i, j, visited) >= 3) {
+								stack.push({"x":i, "y":j});
+							}
+						}
+					}
+					
+					var remove = false;
+					while(stack.length > 0) {
+						remove =true;
+						var v = stack.pop();
+						var pos = v.x * colMax + v.y;
+						console.log(v);
+						
+						if (v.x == endX && v.y == endY) {
+							fieldArray[pos] = fieldArray[pos] + 1 ;
+							updateNumbers();
+						} else {
+							fieldArray[pos] = 0;
+							var t = tileSprites.getAt(pos);
+							t.destroy();
+						}
+					}
+					
+					
+					console.log(stack);
+					printBoard();
+					// fall();
+				}
+				
+				// function fall() {
+				// 	printBoard();
+				// 
+				// 	tileSprites.forEach(function(item){
+				// 		var i = toRow(item.pos);
+				// 		var j = toCol(item.pos);
+				// 		var pos = i * colMax + j;
+				// 
+				// 		if (fieldArray[pos] == 0) return;
+				// 		var delta = 0;
+				// 
+				// 		for (var k=i; k<rowMax; k++) {
+				// 			if (fieldArray[k*colMax+j] == 0) {
+				// 				delta += 1;
+				// 			}
+				// 		}
+				// 
+				// 		var next = (i + delta) * colMax + j;
+				// 
+				// 		if (delta != 0) {
+				// 			console.log(pos, next);
+				// 			moveTile(item, pos, next, false);
+				// 		}
+				// 	});
+				// }
+				
+				function findBlocks(i, j, visited) {
+					
+					// console.log(i, j);
+					
+					if (i < 0 || i > rowMax - 1) {
+						return 0;
+					}
+					if (j < 0 || j > colMax - 1) {
+						return 0;
+					}
+					
+					if (visited[i * colMax + j] == 1) {
+						return 0;
+					} else {
+						visited[i * colMax + j] = 1;
+					}
+
+					var pos = i*colMax+j;
+					var val = fieldArray[pos];
+					var up = 0;
+					var down = 0;
+					var left = 0;
+					var right = 0;
+
+					// console.log("next");
+					var next = -1;
+					
+					next = (i - 1) * colMax + j;
+					if (fieldArray[next] == val) {
+						up =  findBlocks(i - 1, j, visited);
+					}
+					
+					next = (i + 1) * colMax + j;
+					if (fieldArray[next] == val) {
+						down =  findBlocks(i + 1, j, visited);
+					}
+					
+					next = i * colMax + j - 1;
+					if (fieldArray[next] == val) {
+						left =  findBlocks(i, j - 1, visited);
+					}
+					
+					next = i * colMax + j + 1;
+					if (fieldArray[next] == val) {
+						right =  findBlocks(i, j + 1, visited);
+					}
+		
+					return up + down + right + left + 1;
+				}
+				
+				// A NEW "2" IS ADDED TO THE GAME
+				function addTwo(){
+					// choosing an empty tile in the field
+					do{
+						var randomValue = Math.floor(Math.random()*16);
+					} while (fieldArray[randomValue]!=0)
+					// such empty tile now takes "2" value
+					fieldArray[randomValue]=2;
+					// creation of a new sprite with "tile" instance, that is "tile.png" we loaded before
+					var tile = game.add.sprite(toCol(randomValue)*tileSize,toRow(randomValue)*tileSize,"tile");
+					// creation of a custom property "pos" and assigning it the index of the newly added "2"
+					tile.pos = randomValue;
+					// at the beginning the tile is completely transparent
+					tile.alpha=0;
+					// creation of a text which will represent the value of the tile
+					var text = game.add.text(tileSize/2,tileSize/2,"2",{font:"bold 16px Arial",align:"center"});
+                         // setting text anchor in the horizontal and vertical center
+					text.anchor.set(0.5);
+					// adding the text as a child of tile sprite
+					tile.addChild(text);
+					// adding tile sprites to the group
+					tileSprites.add(tile);
+					// creation of a new tween for the tile sprite
+					var fadeIn = game.add.tween(tile);
+					// the tween will make the sprite completely opaque in 250 milliseconds
+					fadeIn.to({alpha:1},250);
+					// tween callback
+					fadeIn.onComplete.add(function(){
+						// updating tile numbers. This is not necessary the 1st time, anyway
+						updateNumbers();
+						// now I can move
+						canMove=true;
+					})
+					// starting the tween
+					fadeIn.start();
+				}
+				
+				// GIVING A NUMBER IN A 1-DIMENSION ARRAY, RETURNS THE ROW
+				function toRow(n){
+					return Math.floor(n/rowMax);
+				}
+				
+				// GIVING A NUMBER IN A 1-DIMENSION ARRAY, RETURNS THE COLUMN
+				function toCol(n){
+					return n%colMax;	
+				}
+				
+				// THIS FUNCTION UPDATES THE NUMBER AND COLOR IN EACH TILE
+				function updateNumbers(){
+					// look how I loop through all tiles
+					tileSprites.forEach(function(item){
+						// retrieving the proper value to show
+						var value = fieldArray[item.pos];
+						// showing the value
+						item.getChildAt(0).text=value;
+						// tinting the tile
+						item.tint=colors[value]
+					});	
+				}
+				
+
+				
+				// FUNCTION TO COMPLETE THE MOVE AND PLACE ANOTHER "2" IF WE CAN
+				function endMove(m){
+					// if we move the tile...
+					if(m){
+						// add another "2"
+     					// addTwo();
+                         }
+                         else{
+                         	// otherwise just let the player be able to move again
+						canMove=true;
+					}
+				}
+				
+				// FUNCTION TO MOVE A TILE
+				function moveTile(tile,from,to,remove){
+					// first, we update the array with new values
+                         // fieldArray[to]=fieldArray[from];
+                         // fieldArray[from]=0;
+                         tile.pos=to;
+                         // then we create a tween
+                         var movement = game.add.tween(tile);
+                         movement.to({x:tileSize*(toCol(to)),y:tileSize*(toRow(to))},200);
+                         if(remove){
+                         	// if the tile has to be removed, it means the destination tile must be multiplied by 2
+                              // fieldArray[to]*=2;
+                              // at the end of the tween we must destroy the tile
+                              movement.onComplete.add(function(){
+                                   tile.destroy();
+                              });
+                         }
+                         // let the tween begin!
+                         movement.start();
+                    }
+                    
+                    // MOVING TILES DOWN - SAME PRINCIPLES AS BEFORE
+                    function moveDown(){
+                          if(canMove){
+                              canMove=false;
+                              var moved=false;
+     					tileSprites.sort("y",Phaser.Group.SORT_DESCENDING);
+     					tileSprites.forEach(function(item){
+     						var row = toRow(item.pos);
+     						var col = toCol(item.pos);
+     						if(row<3){
+                                //         var remove = false;
+     							// for(i=row+1;i<=3;i++){
+     							// 	if(fieldArray[i*4+col]!=0){
+     							// 		if(fieldArray[i*4+col]==fieldArray[row*4+col]){
+     							// 			remove = true;
+     							// 			i++;                                             
+     							// 		}
+                                //                   break
+     							// 	}
+     							// }
+     							if(row!=i-1){
+                                             moved=true;
+     								moveTile(item,row*4+col,(i-1)*4+col,false);
+     							}
+     						}
+     					});
+     				     endMove(moved);
+                         }
+				}
+	    		};
+		</script>
+    </head>
+    <body>
+    </body>
+</html>
