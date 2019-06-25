@@ -47,6 +47,10 @@
 					32768:0xFF1111,
 					65536:0xFF0000
 				}
+				
+				for (var i = 10; i<999; i++) {
+					colors[i] = Math.random()*0xFFFFFF<<0;
+				}
 				// at the beginning of the game, the player cannot move
                     var canMove=false;
 					var lock = 0;
@@ -437,7 +441,7 @@
 					// at the beginning the tile is completely transparent
 					tile.alpha=1;
 					// creation of a text which will represent the value of the tile
-					var text = game.add.text(tileSize/2,tileSize/2, val.toString(), {font:"bold 16px Arial",align:"center"});
+					var text = game.add.text(tileSize/2,tileSize/2, val.toString(), {font:"bold 30px Arial",align:"center"});
 						 // setting text anchor in the horizontal and vertical center
 					text.anchor.set(0.5);
 					// adding the text as a child of tile sprite
