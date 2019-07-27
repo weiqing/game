@@ -11,21 +11,27 @@
 				var tileSize = 100;
 				var colMax = 5;
 				var rowMax = 5;
+				var gameInfo;
 				
 				// creation of a new phaser game, with a proper width and height according to tile size
-				var game = new Phaser.Game(tileSize*colMax,tileSize*rowMax,Phaser.CANVAS,"",{preload:onPreload, create:onCreate, update:onUpdate});
+				var game = new Phaser.Game(tileSize*(colMax+2),tileSize*(rowMax+5),Phaser.CANVAS,"",{preload:onPreload, create:onCreate, update:onUpdate});
 				// game array, starts with all cells to zero
 				var fieldArray = Array(colMax * rowMax).fill(0);
 				// this is the group which will contain all tile sprites
 				var tileSprites;
 				var frontGroup;
 				var tileMap = {};
+				var scoreTile;
+				var lifeTile;
+				var foundBlocksCancelDedupe = false;
+				
 				// variables to handle keyboard input
 				var upKey;
 				var downKey;
 				var leftKey;
 				var rightKey;
 				// colors to tint tiles according to their value
+
 				var colors = {
 					0:0x71FF61,
 					1:0x71FF61,
@@ -39,6 +45,21 @@
 					9:0xFFAAAA
 				}
 				
+				// var colors = {
+				// 	1:0xDAF7A6,
+				// 	2:0xFFC300,
+				// 	3:0xFF5733,
+				// 	4:0xC70039,
+				// 	5:0x900C3F,
+				// 	6:0x581845,
+				// 	7:0xFFDDDD,
+				// 	8:0xFFCCCC,
+				// 	9:0xFFBBBB
+				// }
+				
+				// create a new bitmap data object
+			    var bmd;
+				
 				for (var i = 10; i<999; i++) {
 					colors[i] = Math.random()*0xFFFFFF<<0;
 				}
@@ -49,15 +70,44 @@
 				// THE GAME IS PRELOADING
 				function onPreload() {
 					// preload the only image we are using in the game
-					game.load.image("tile", "tile.png");
+					// game.load.image("tile", "tile.png");
+					bmd = game.add.bitmapData(tileSize,tileSize);
+
+				    // draw to the canvas context like normal
+				    bmd.ctx.beginPath();
+				    bmd.ctx.rect(0,0,tileSize,tileSize);
+				    bmd.ctx.fillStyle = '#fefefe';
+				    bmd.ctx.fill();
+
+					background = game.add.image(0, 0, bmd);
+        			background.height = game.height;
+        			background.width = game.width;
 				}
 				
 				// THE GAME HAS BEEN CREATED
 				function onCreate() {
+					
+					gameInfo = {"score":0, "life":5};
 
 					// sprite group declaration
 					tileSprites = game.add.group();
 					frontGroup = game.add.group();
+					
+					verticalMargin = (game.height - (tileSize * rowMax))/2;
+					horizontalMargin = (game.width - (tileSize * colMax))/2;
+					
+					tileSprites.x = horizontalMargin;
+					tileSprites.y = verticalMargin;
+					
+					frontGroup.x = horizontalMargin;
+					frontGroup.y = verticalMargin;
+
+					scoreTile = game.add.text(160, 100, "score: 0");
+					scoreTile.anchor.set(0.5);
+					
+					lifeTile = game.add.text(150, 200, "life: 5");
+					lifeTile.anchor.set(0.5);
+
 					initGame();
 				}
 				
@@ -71,6 +121,9 @@
 						// console.log("done");
 						check();
 					}
+					
+					lifeTile.setText("life: " + gameInfo["life"].toString());
+					scoreTile.setText("score: " + gameInfo["score"].toString());
 					// if (lock == 0) {
 					// 	check();
 					// }
@@ -100,8 +153,8 @@
 						return null;
 					} else {
 						var pos = result.sort(function (a, b) {  return a - b;})[0];
-						console.log(result);
-						console.log("cancel " + toRow(pos) + " " + toCol(pos));
+						// console.log(result);
+						// console.log("cancel " + toRow(pos) + " " + toCol(pos));
 						return pos;
 					}
 				}
@@ -117,11 +170,21 @@
 						var x = toRow(pos);
 						var y = toCol(pos);
 						canMove = false;
+						if (foundBlocksCancelDedupe == true) {
+							return;
+						}
+
+						foundBlocksCancelDedupe = true;
 						setTimeout(function(){  
 							
 								// console.log("timeout func: ", x, y);
 								// 
-								shrinkBlocksPostClick(x, y); 
+								shrinkBlocksPostClick(x, y, function() {
+									foundBlocksCancelDedupe = false;
+								});
+								if (gameInfo["life"] <= 4) {
+									gameInfo["life"] += 1;
+								}
 							
 						}, 300);
 					}
@@ -151,7 +214,7 @@
 					
 											fieldArray[endPos] = fieldArray[currentTile.pos];
 											fieldArray[currentTile.pos] = 0;
-											console.log(currentTile.pos, endPos);
+											// console.log(currentTile.pos, endPos);
 											currentTile.pos = endPos;
 											
 											// canMove = true;
@@ -185,7 +248,7 @@
 							
 						}
 					}
-					console.log(fieldArray);
+					// console.log(fieldArray);
 					
 					game.scale.scaleMode = Phaser.ScaleManager.aspectRatio;
 					game.scale.pageAlignVertically = true;
@@ -198,6 +261,7 @@
 				
 				function click(i, j) {
 					if (canMove == true && lock == 0) {
+						gameInfo["life"] -= 1;
 						fieldArray[i*colMax+j] += 1;
 						updateNumbers();
 						// checkBoard();
@@ -207,7 +271,7 @@
 					}
 				}
 				
-				function shrinkBlocksPostClick(i, j) {
+				function shrinkBlocksPostClick(i, j, callback) {
 					// console.log(i, j);
 					if (findBlocks(i, j, Array(colMax * rowMax).fill(0)) >= 3) {
 						canMove = false;
@@ -226,7 +290,7 @@
 								fieldArray[pos] = 0;
 							}
 						}
-						console.log(result);
+						// console.log(result);
 						for (var pos in result){
 							// if (pos == i*colMax + j) {
 							// 	continue;
@@ -234,12 +298,15 @@
 							var path = result[pos].reverse();
 							tileSprites.forEach(function(item){
 								if(item.pos == pos) {
-									console.log(i ,j, item.pos);
+									// console.log(i ,j, item.pos);
 									
 									moveTileWithSteps(item, path, function(currentTile){
 										item.destroy();
 										if (maxPos == currentTile.pos) {
-											console.log("last one");
+											// console.log("last one");
+											if (callback) {
+												callback();
+											}
 											fieldArray[i*colMax + j] += 1;
 											canMove = true;
 											updateNumbers();
@@ -247,20 +314,29 @@
 											// printBoard();
 										}
 									}, function(currentTile){
-										var style = { font: "bold 30px Arial", fill: "#ffffff", align: "center" };
+										var style = { font: "bold 30px Arial", fill: "#aaaaaa", align: "center" };
 										var score = parseInt(currentTile.children[0]._text) * 10;
 										var text = game.add.text(currentTile.x + tileSize/2, currentTile.y + tileSize/2, score.toString(), style);
-										// text.alpha=0;
+										text.visible = false;
 										text.anchor.set(0.5);
 										frontGroup.add(text);
 										var textMovement = game.add.tween(text);
+										var textScale = game.add.tween(text.scale);
+										
 										// textMovement = textMovement.to({alpha:1},250,Phaser.Easing.Linear.None, true, 1000*(maxLength-path.length));
-										textMovement = textMovement.to({alpha:1, x:text.x, y:text.y-100},500,Phaser.Easing.Linear.None,  true, 200*(maxLength-path.length));
+										textMovement = textMovement.to({alpha:0.5, x:text.x, y:text.y-100},500,Phaser.Easing.Linear.None,  true, 200*(maxLength-path.length));
 										textMovement.onComplete.add(function() {
 											text.destroy();
+											gameInfo["score"] = gameInfo["score"] + score;
+										}, this);
+										textMovement.onStart.add(function() {
+											text.visible = true;
 										}, this);
 										textMovement.start();
 
+										
+										textScale.to({ x: 3, y: 3},400,Phaser.Easing.Linear.None,  true, 200*(maxLength-path.length)+100);
+										textScale.start();
 									});
 								}
 							});	
@@ -331,11 +407,11 @@
 					for (var k=0; k<colMax;k ++) {
 						var prevRowVal = fieldArray[(i-1)*colMax + k];
 						if(targetVal == prevRowVal && j == k) {
-							console.log(i, j);
+							// console.log(i, j);
 							for (var z=0; z<colMax; z++) {
 								var pos = i*colMax + z;
 								if (isHorizontalReachable(i, z, j) && fieldArray[pos] == targetVal) {
-									console.log("should move to: ", i, z);
+									// console.log("should move to: ", i, z);
 									
 									// tileSprites.forEach(function(item){
 									// 	if(item.pos == pos) {
@@ -350,7 +426,7 @@
 				}
 				
 				function test() {
-					console.log("test");
+					// console.log("test");
 					var current = Array(colMax * rowMax).fill(0);
 					for (var j=colMax - 1; j>=0; j--) {
 						for (var i=rowMax - 1; i>=0; i--) {
@@ -372,7 +448,7 @@
 							}
 						}
 					}
-					console.log(current);
+					// console.log(current);
 				}
 				
 				function checkBoard() {
@@ -393,7 +469,7 @@
 						out += "\n";
 						
 					}
-					console.log(out);
+					// console.log(out);
 				}
 				
 				function printBoard() {
@@ -410,12 +486,12 @@
 						out += "\n";
 						
 					}
-					console.log(out);
+					// console.log(out);
 				}
 				
 				function createTile(i, j, val) {
 					pos = i*colMax + j;
-					var tile = game.add.sprite(toCol(pos)*tileSize,(toRow(pos)-1)*tileSize,"tile");
+					var tile = game.add.sprite(toCol(pos)*tileSize,(toRow(pos)-1)*tileSize,bmd);
 					// creation of a custom property "pos" and assigning it the index of the newly added "2"
 					tile.pos = pos;
 					// at the beginning the tile is completely transparent
@@ -466,7 +542,7 @@
 						remove =true;
 						var v = stack.pop();
 						var pos = v.x * colMax + v.y;
-						console.log(v);
+						// console.log(v);
 						
 						if (v.x == endX && v.y == endY) {
 							fieldArray[pos] = fieldArray[pos] + 1 ;
@@ -479,7 +555,7 @@
 					}
 					
 					
-					console.log(stack);
+					// console.log(stack);
 					printBoard();
 					// fall();
 				}
