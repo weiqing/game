@@ -35,17 +35,7 @@
 					6:0xFFDDDD,
 					7:0xFFCCCC,
 					8:0xFFBBBB,
-					9:0xFFAAAA,
-					128:0xFF9999,
-					256:0xFF8888,
-					512:0xFF7777,
-					1024:0xFF6666,
-					2048:0xFF5555,
-					4096:0xFF4444,
-					8192:0xFF3333,
-					16384:0xFF2222,
-					32768:0xFF1111,
-					65536:0xFF0000
+					9:0xFFAAAA
 				}
 				
 				for (var i = 10; i<999; i++) {
@@ -107,16 +97,24 @@
 				}
 				
 				function findRandomBlocksToCancel() {
+					var result = [];
 					for (var j=colMax - 1; j>=0; j--) {
 						for (var i=0; i<rowMax; i++) {
 							var visited = Array(colMax * rowMax).fill(0);
 							var val = findBlocks(i, j, visited);
 							if ( val >= 3) {
-								return i*colMax + j;
+								result.push(i*colMax + j);
 							}
 						}
 					}
-					return null;
+					if (result.length == 0) {
+						return null;
+					} else {
+						var pos = result.sort(function (a, b) {  return a - b;})[0];
+						console.log(result);
+						console.log("cancel " + toRow(pos) + " " + toCol(pos));
+						return pos;
+					}
 				}
 				
 				function check() {
@@ -125,6 +123,7 @@
 						return;
 					}
 					var pos = findRandomBlocksToCancel();
+					
 					if (pos != null) {
 						var x = toRow(pos);
 						var y = toCol(pos);
@@ -178,14 +177,7 @@
 				}
 				
 				function initGame() {
-					// do{
-					// 	var randomValue = Math.floor(Math.random()*16);
-					// } while (fieldArray[randomValue]!=0)
-					// such empty tile now takes "2" value
-					// console.log(fieldArray);
-					// fieldArray[randomValue]=2;
-					
-					var debug = [1, 1, 3, 4, 1, 2, 2, 2, 3, 5, 4, 5, 2, 3, 4, 5];
+					// var debug = [1, 1, 3, 4, 1, 2, 2, 2, 3, 5, 4, 5, 2, 3, 4, 5];
 					
 					for (var i=0; i<rowMax; i++) {
 						for (var j=0; j<colMax; j++) {
@@ -504,32 +496,6 @@
 					printBoard();
 					// fall();
 				}
-				
-				// function fall() {
-				// 	printBoard();
-				// 
-				// 	tileSprites.forEach(function(item){
-				// 		var i = toRow(item.pos);
-				// 		var j = toCol(item.pos);
-				// 		var pos = i * colMax + j;
-				// 
-				// 		if (fieldArray[pos] == 0) return;
-				// 		var delta = 0;
-				// 
-				// 		for (var k=i; k<rowMax; k++) {
-				// 			if (fieldArray[k*colMax+j] == 0) {
-				// 				delta += 1;
-				// 			}
-				// 		}
-				// 
-				// 		var next = (i + delta) * colMax + j;
-				// 
-				// 		if (delta != 0) {
-				// 			console.log(pos, next);
-				// 			moveTile(item, pos, next, false);
-				// 		}
-				// 	});
-				// }
 				
 				function findBlocks(i, j, visited) {
 					
