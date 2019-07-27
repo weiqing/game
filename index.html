@@ -18,6 +18,7 @@
 				var fieldArray = Array(colMax * rowMax).fill(0);
 				// this is the group which will contain all tile sprites
 				var tileSprites;
+				var frontGroup;
 				var tileMap = {};
 				// variables to handle keyboard input
 				var upKey;
@@ -53,22 +54,10 @@
 				
 				// THE GAME HAS BEEN CREATED
 				function onCreate() {
-					// listeners for WASD keys
-					// upKey = game.input.keyboard.addKey(Phaser.Keyboard.W);
-					// upKey.onDown.add(moveUp,this);
-					// 
-					// 
-    				// 	downKey = game.input.keyboard.addKey(Phaser.Keyboard.S);
-    				// 	downKey.onDown.add(moveDown,this);
-    				// 	leftKey = game.input.keyboard.addKey(Phaser.Keyboard.A);
-    				// 	leftKey.onDown.add(moveLeft,this);
-    				// 	rightKey = game.input.keyboard.addKey(Phaser.Keyboard.D);
-    				// 	rightKey.onDown.add(moveRight,this);
-    					// sprite group declaration
+
+					// sprite group declaration
 					tileSprites = game.add.group();
-    					// at the beginning of the game we add two "2"
-					// addTwo();
-					// addTwo();
+					frontGroup = game.add.group();
 					initGame();
 				}
 				
@@ -237,11 +226,11 @@
 								fieldArray[pos] = 0;
 							}
 						}
-						// console.log(result);
+						console.log(result);
 						for (var pos in result){
-							if (pos == i*colMax + j) {
-								continue;
-							}
+							// if (pos == i*colMax + j) {
+							// 	continue;
+							// }
 							var path = result[pos].reverse();
 							tileSprites.forEach(function(item){
 								if(item.pos == pos) {
@@ -257,6 +246,21 @@
 											// checkBoard();
 											// printBoard();
 										}
+									}, function(currentTile){
+										var style = { font: "bold 30px Arial", fill: "#ffffff", align: "center" };
+										var score = parseInt(currentTile.children[0]._text) * 10;
+										var text = game.add.text(currentTile.x + tileSize/2, currentTile.y + tileSize/2, score.toString(), style);
+										// text.alpha=0;
+										text.anchor.set(0.5);
+										frontGroup.add(text);
+										var textMovement = game.add.tween(text);
+										// textMovement = textMovement.to({alpha:1},250,Phaser.Easing.Linear.None, true, 1000*(maxLength-path.length));
+										textMovement = textMovement.to({alpha:1, x:text.x, y:text.y-100},500,Phaser.Easing.Linear.None,  true, 200*(maxLength-path.length));
+										textMovement.onComplete.add(function() {
+											text.destroy();
+										}, this);
+										textMovement.start();
+
 									});
 								}
 							});	
@@ -283,23 +287,23 @@
 					}
 				}
 				
-				function moveTileWithSteps(tile,steps,callback){
-					// first, we update the array with new values
-                     // fieldArray[to]=fieldArray[from];
-                     // fieldArray[from]=0;
-                     // tile.pos=steps[steps.length - 1];
-					 var prevAnim = null;
+				function moveTileWithSteps(tile,steps,callback,preCallback){
+					if (preCallback) {
+						preCallback(tile);
+					}
 					 // console.log("steps: ", steps, tile);
 					 var movement = game.add.tween(tile);
 					 movement.currentTile = tile;
+					 // movement = movement.to({x:tile.x,y:tile.y},1,Phaser.Easing.Linear.None);
 					
 					 for (var i in steps) {
 						 if (i==0) continue;
 						 // console.log("step: ", steps[i]);
 						 var step = steps[i];
 						 // then we create a tween
-						  movement = movement.to({x:tileSize*(toCol(step)),y:tileSize*(toRow(step))},150,Phaser.Easing.Quadratic.In);
+						 movement = movement.to({x:tileSize*(toCol(step)),y:tileSize*(toRow(step))},150,Phaser.Easing.Linear.None);
 					 }
+
 					 movement.onComplete.add(function() {
 						 callback(movement.currentTile);
 					 }, this);
@@ -589,72 +593,8 @@
 						item.tint=colors[value]
 					});	
 				}
-				
 
-				
-				// FUNCTION TO COMPLETE THE MOVE AND PLACE ANOTHER "2" IF WE CAN
-				function endMove(m){
-					// if we move the tile...
-					if(m){
-						// add another "2"
-     					// addTwo();
-                         }
-                         else{
-                         	// otherwise just let the player be able to move again
-						canMove=true;
-					}
-				}
-				
-				// FUNCTION TO MOVE A TILE
-				function moveTile(tile,from,to,remove){
-					// first, we update the array with new values
-                         // fieldArray[to]=fieldArray[from];
-                         // fieldArray[from]=0;
-                         tile.pos=to;
-                         // then we create a tween
-                         var movement = game.add.tween(tile);
-                         movement.to({x:tileSize*(toCol(to)),y:tileSize*(toRow(to))},200);
-                         if(remove){
-                         	// if the tile has to be removed, it means the destination tile must be multiplied by 2
-                              // fieldArray[to]*=2;
-                              // at the end of the tween we must destroy the tile
-                              movement.onComplete.add(function(){
-                                   tile.destroy();
-                              });
-                         }
-                         // let the tween begin!
-                         movement.start();
-                    }
-                    
-                    // MOVING TILES DOWN - SAME PRINCIPLES AS BEFORE
-                    function moveDown(){
-                          if(canMove){
-                              canMove=false;
-                              var moved=false;
-     					tileSprites.sort("y",Phaser.Group.SORT_DESCENDING);
-     					tileSprites.forEach(function(item){
-     						var row = toRow(item.pos);
-     						var col = toCol(item.pos);
-     						if(row<3){
-                                //         var remove = false;
-     							// for(i=row+1;i<=3;i++){
-     							// 	if(fieldArray[i*4+col]!=0){
-     							// 		if(fieldArray[i*4+col]==fieldArray[row*4+col]){
-     							// 			remove = true;
-     							// 			i++;                                             
-     							// 		}
-                                //                   break
-     							// 	}
-     							// }
-     							if(row!=i-1){
-                                             moved=true;
-     								moveTile(item,row*4+col,(i-1)*4+col,false);
-     							}
-     						}
-     					});
-     				     endMove(moved);
-                         }
-				}
+
 	    		};
 		</script>
     </head>
