@@ -34,28 +34,26 @@
 
 				var colors = {
 					0:0x71FF61,
-					1:0x71FF61,
-					2:0x92C1FD,
-					3:0xE4BF5A,
-					4:0xF08080,
-					5:0xA650E8,
-					6:0xFFDDDD,
-					7:0xFFCCCC,
+					1:0xBAF058,
+					2:0x5BC2FA,
+					3:0xFEC764,
+					4:0xFD725D,
+					5:0x179D87,
+					6:0x7768F7,
+					7:0xF45CC2,
 					8:0xFFBBBB,
 					9:0xFFAAAA
 				}
 				
-				// var colors = {
-				// 	1:0xDAF7A6,
-				// 	2:0xFFC300,
-				// 	3:0xFF5733,
-				// 	4:0xC70039,
-				// 	5:0x900C3F,
-				// 	6:0x581845,
-				// 	7:0xFFDDDD,
-				// 	8:0xFFCCCC,
-				// 	9:0xFFBBBB
-				// }
+				var textColors = {
+					1:"3FAC21",
+					2:"208BFA",
+					3:"FC732F",
+					4:"F5D19A",
+					5:"83E59F",
+					6:"CDBDFD",
+					7:"FCBEA2"
+				}
 				
 				// create a new bitmap data object
 			    var bmd;
@@ -510,6 +508,7 @@
 					}, this);
 					// adding tile sprites to the group
 					tileSprites.add(tile);
+					tile.text = text;
 					// creation of a new tween for the tile sprite
 					var fadeIn = game.add.tween(tile);
 					// the tween will make the sprite completely opaque in 250 milliseconds
@@ -610,43 +609,6 @@
 					return up + down + right + left + 1;
 				}
 				
-				// A NEW "2" IS ADDED TO THE GAME
-				function addTwo(){
-					// choosing an empty tile in the field
-					do{
-						var randomValue = Math.floor(Math.random()*16);
-					} while (fieldArray[randomValue]!=0)
-					// such empty tile now takes "2" value
-					fieldArray[randomValue]=2;
-					// creation of a new sprite with "tile" instance, that is "tile.png" we loaded before
-					var tile = game.add.sprite(toCol(randomValue)*tileSize,toRow(randomValue)*tileSize,"tile");
-					// creation of a custom property "pos" and assigning it the index of the newly added "2"
-					tile.pos = randomValue;
-					// at the beginning the tile is completely transparent
-					tile.alpha=0;
-					// creation of a text which will represent the value of the tile
-					var text = game.add.text(tileSize/2,tileSize/2,"2",{font:"bold 16px Arial",align:"center"});
-                         // setting text anchor in the horizontal and vertical center
-					text.anchor.set(0.5);
-					// adding the text as a child of tile sprite
-					tile.addChild(text);
-					// adding tile sprites to the group
-					tileSprites.add(tile);
-					// creation of a new tween for the tile sprite
-					var fadeIn = game.add.tween(tile);
-					// the tween will make the sprite completely opaque in 250 milliseconds
-					fadeIn.to({alpha:1},250);
-					// tween callback
-					fadeIn.onComplete.add(function(){
-						// updating tile numbers. This is not necessary the 1st time, anyway
-						updateNumbers();
-						// now I can move
-						canMove=true;
-					})
-					// starting the tween
-					fadeIn.start();
-				}
-				
 				// GIVING A NUMBER IN A 1-DIMENSION ARRAY, RETURNS THE ROW
 				function toRow(n){
 					return Math.floor(n/rowMax);
@@ -666,7 +628,9 @@
 						// showing the value
 						item.getChildAt(0).text=value;
 						// tinting the tile
-						item.tint=colors[value]
+						item.tint=colors[value];
+						var style = { font: "bold 30px Arial", fill: "#"+textColors[value], align: "center" };
+						item.text.setStyle(style, true);
 					});	
 				}
 
