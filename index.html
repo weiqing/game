@@ -180,9 +180,6 @@
 								shrinkBlocksPostClick(x, y, function() {
 									foundBlocksCancelDedupe = false;
 								});
-								if (gameInfo["life"] <= 4) {
-									gameInfo["life"] += 1;
-								}
 							
 						}, 300);
 					}
@@ -308,6 +305,10 @@
 											fieldArray[i*colMax + j] += 1;
 											canMove = true;
 											updateNumbers();
+											
+											if (gameInfo["life"] <= 4) {
+												gameInfo["life"] += 1;
+											}
 											// checkBoard();
 											// printBoard();
 										}
