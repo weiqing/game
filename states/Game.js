@@ -94,7 +94,7 @@ class Game extends Phaser.State {
       this.check();
     }
     if (this.gameInfo["life"] < 0) {
-        this.state.start('GameOver');
+        this.state.start('GameOver', true, false, this.gameInfo);
     }
     this.lifeTile.setText("life: " + this.gameInfo["life"].toString());
     this.scoreTile.setText("score: " + this.gameInfo["score"].toString());
