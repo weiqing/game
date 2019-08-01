@@ -7,6 +7,7 @@ class Game extends Phaser.State {
     this.bmd;
     this.height = this.world.height;
     this.width = this.world.width;
+    this.game.time.desiredFps = 120;
 
     // var game = new Phaser.Game(tileSize * (colMax + 2), tileSize * (rowMax + 5), Phaser.CANVAS, "", { preload: onPreload, create: onCreate, update: onUpdate });
     // game array, starts with all cells to zero
@@ -284,7 +285,7 @@ class Game extends Phaser.State {
     for (var i in steps) {
       if (i == 0) continue;
       var step = steps[i];
-      movement = movement.to({ x: game.tileSize * (game.toCol(step)), y: game.tileSize * (game.toRow(step)) }, 150, Phaser.Easing.Linear.None);
+      movement = movement.to({ x: game.tileSize * (game.toCol(step)), y: game.tileSize * (game.toRow(step)) }, 100, Phaser.Easing.Linear.None);
     }
 
     movement.onComplete.add(function () {
